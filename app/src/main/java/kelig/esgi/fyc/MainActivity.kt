@@ -24,7 +24,6 @@ import java.util.concurrent.Executors
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss"
         private const val REQUIRED_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS = arrayOf(android.Manifest.permission.CAMERA)
     }
@@ -34,9 +33,7 @@ class MainActivity : AppCompatActivity() {
     private var camera: Camera? = null
     private var imageAnalyzer: ImageAnalysis? = null
 
-    private lateinit var outputDirectory: File
 
-    private lateinit var btnTakePhoto: Button
     private lateinit var cameraExecutor: ExecutorService
 
 
@@ -44,21 +41,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        btnTakePhoto = findViewById(R.id.btn_take_photo)
-        btnTakePhoto.setOnClickListener{ takePhoto() }
-
         if (allPermissionsGranted()) {
-            startCamera()
+            cameraAnalysis()
         }
         else {
             ActivityCompat.requestPermissions(
                 this, REQUIRED_PERMISSIONS, REQUIRED_CODE_PERMISSIONS
             )
         }
-
-
-
-        outputDirectory = getOutputDirectory()
 
         cameraExecutor = Executors.newSingleThreadExecutor()
     }
@@ -71,7 +61,7 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if(requestCode == REQUIRED_CODE_PERMISSIONS) {
             if(allPermissionsGranted()) {
-                startCamera()
+                cameraAnalysis()
             }
             else {
                 Toast.makeText(this, "No permission", Toast.LENGTH_SHORT).show()
@@ -80,34 +70,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun takePhoto() {
-        val imageCapture: ImageCapture = imageCapture?:return
 
-        val file = File(
-            outputDirectory,
-            SimpleDateFormat(FILENAME_FORMAT, Locale.FRENCH)
-                .format(System.currentTimeMillis()) +".jpg")
-        val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
-
-        imageCapture.takePicture(outputOptions, ContextCompat.getMainExecutor(this), object:ImageCapture.OnImageSavedCallback{
-            override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                val savedUri = Uri.fromFile(file)
-                val msg = "Photo capture succeed: \n\n $savedUri"
-                Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-                Log.e(TAG, msg)
-            }
-
-            override fun onError(exception: ImageCaptureException) {
-                Log.e(TAG, "Photo capture failed: ${exception.message}", exception)
-            }
-        })
-    }
-
-    private fun startCamera() {
+    private fun cameraAnalysis() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance((this))
         cameraProviderFuture.addListener(Runnable {
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-
             preview = Preview.Builder().build()
             imageCapture = ImageCapture.Builder().build()
             imageAnalyzer = ImageAnalysis.Builder()
@@ -117,8 +84,8 @@ class MainActivity : AppCompatActivity() {
                         setOnLumaListener(object: CustomImageAnalyzer.LumaListener {
                             override fun setOnLumaListener(average: Double, max: Int) {
                                 runOnUiThread {
-                                    tvAverage.text = "Average = ${"%.2f".format(average)}"
-                                    tvMax.text = "Max. value = $max"
+                                    tvAverage.text = "Moyenne = ${"%.2f".format(average)}"
+                                    tvMax.text = "Valeur max = $max"
                                 }
                             }
                         })
@@ -140,17 +107,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
-    }
-
-    private fun getOutputDirectory(): File {
-        val mediaDir = externalMediaDirs.firstOrNull()?.let {
-            File(it, resources.getString(R.string.app_name)).apply {mkdirs()
-            }
-        }
-        return if (mediaDir != null && mediaDir.exists())
-            mediaDir
-        else
-            filesDir
     }
 
     private class CustomImageAnalyzer(): ImageAnalysis.Analyzer {

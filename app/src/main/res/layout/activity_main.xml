@@ -6,15 +6,6 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <Button
-        android:id="@+id/btn_take_photo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        android:text="@string/prendre_une_photo"
-        app:layout_constraintRight_toRightOf="parent"
-         />
 
     <androidx.camera.view.PreviewView
         android:id="@+id/cam_preview"
