@@ -71,39 +71,6 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    private fun cameraAnalysis() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance((this))
-        cameraProviderFuture.addListener(Runnable {
-            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-            preview = Preview.Builder().build()
-            imageCapture = ImageCapture.Builder().build()
-            imageAnalyzer = ImageAnalysis.Builder()
-                .build()
-                .also {
-                    it.setAnalyzer(cameraExecutor, CustomImageAnalyzer().apply {
-                        setOnLumaListener(object: CustomImageAnalyzer.LumaListener {
-                            override fun setOnLumaListener(average: Double, max: Int) {
-                                runOnUiThread {
-                                    tvAverage.text = "Moyenne = ${"%.2f".format(average)}"
-                                    tvMax.text = "Valeur max = $max"
-                                }
-                            }
-                        })
-                    })
-                }
-
-            val cameraSelector = CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
-
-            try {
-                cameraProvider.unbindAll()
-                camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture, imageAnalyzer)
-                preview?.setSurfaceProvider(cam_preview.createSurfaceProvider(camera?.cameraInfo))
-            }
-            catch (e: Exception) {
-                Log.e(TAG, "Use case binding failed", e)
-            }
-        }, ContextCompat.getMainExecutor(this))
-    }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
@@ -111,7 +78,7 @@ class MainActivity : AppCompatActivity() {
 
     private class CustomImageAnalyzer(): ImageAnalysis.Analyzer {
 
-        private lateinit var mListener: LumaListener
+        private lateinit var mListener: FycListener
 
         private fun ByteBuffer.toByteArray(): ByteArray {
             rewind()
@@ -127,16 +94,16 @@ class MainActivity : AppCompatActivity() {
             val average = pixels.average()
             val max = pixels.maxOrNull()
 
-            mListener.setOnLumaListener(average, max!!)
+            mListener.setOnFycListener(average, max!!)
 
             image.close()
         }
 
-        interface LumaListener {
-            fun setOnLumaListener(average: Double, max: Int)
+        interface FycListener {
+            fun setOnFycListener(average: Double, max: Int)
         }
 
-        fun setOnLumaListener(mListener: LumaListener) {
+        fun setOnFycListener(mListener: FycListener) {
             this.mListener = mListener
         }
     }
